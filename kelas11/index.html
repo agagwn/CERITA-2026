@@ -524,39 +524,63 @@ function goPage2() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Submit ──
+// ── Submit (pakai hidden iframe, lebih stabil daripada fetch) ──
 function submitForm() {
   const elCerita = document.getElementById('q_cerita_bebas');
   if (elCerita) save('cerita_bebas', elCerita.value);
   const d = load();
 
-  const body = [
-    'entry.205221591='  + encodeURIComponent((d.nama||'').trim()),
-    'entry.2083401968=' + encodeURIComponent((d.kelas||'').trim()),
-    'entry.2004058541=' + encodeURIComponent((d.q3||'').trim()),
-    'entry.1093529126=' + encodeURIComponent((d.q4||'').trim()),
-    'entry.1606509133=' + encodeURIComponent((d.q5||'').trim()),
-    'entry.1825456161=' + encodeURIComponent((d.q6||'').trim()),
-    'entry.1566086665=' + encodeURIComponent((d.q7||'').trim()),
-    'entry.1925369768=' + encodeURIComponent((d.q8||'').trim()),
-    'entry.1436663988=' + encodeURIComponent((d.q9||'').trim()),
-    'entry.1300626341=' + encodeURIComponent((d.q10||'').trim()),
-    'entry.1658547991=' + encodeURIComponent((document.getElementById('q_refleksi').value||d.refleksi||'').trim()),
-    'entry.98880624='   + encodeURIComponent((document.getElementById('q_pertanyaan').value||d.pertanyaan||'').trim()),
-    'entry.760411949='  + encodeURIComponent((document.getElementById('q_musik').value||d.musik||'').trim()),
-    'entry.1719336686=' + encodeURIComponent((document.getElementById('q_jujur').value||d.jujur||'').trim()),
-    'entry.1280060488=' + encodeURIComponent((document.getElementById('q_istirahat').value||d.istirahat||'').trim()),
-    'entry.1453868785=' + encodeURIComponent((document.getElementById('q_syukur').value||d.syukur||'').trim()),
-    'entry.2030962328=' + encodeURIComponent((document.getElementById('q_berhasil').value||d.berhasil||'').trim()),
-    'entry.382372806='  + encodeURIComponent((document.getElementById('q_cerita_bebas').value||d.cerita_bebas||'').trim())
-  ].join('&');
+  const fields = {
+    'entry.205221591':  (d.nama||'').trim(),
+    'entry.2083401968': (d.kelas||'').trim(),
+    'entry.2004058541': (d.q3||'').trim(),
+    'entry.1093529126': (d.q4||'').trim(),
+    'entry.1606509133': (d.q5||'').trim(),
+    'entry.1825456161': (d.q6||'').trim(),
+    'entry.1566086665': (d.q7||'').trim(),
+    'entry.1925369768': (d.q8||'').trim(),
+    'entry.1436663988': (d.q9||'').trim(),
+    'entry.1300626341': (d.q10||'').trim(),
+    'entry.1658547991': (document.getElementById('q_refleksi').value||d.refleksi||'').trim(),
+    'entry.98880624':   (document.getElementById('q_pertanyaan').value||d.pertanyaan||'').trim(),
+    'entry.760411949':  (document.getElementById('q_musik').value||d.musik||'').trim(),
+    'entry.1719336686': (document.getElementById('q_jujur').value||d.jujur||'').trim(),
+    'entry.1280060488': (document.getElementById('q_istirahat').value||d.istirahat||'').trim(),
+    'entry.1453868785': (document.getElementById('q_syukur').value||d.syukur||'').trim(),
+    'entry.2030962328': (document.getElementById('q_berhasil').value||d.berhasil||'').trim(),
+    'entry.382372806':  (document.getElementById('q_cerita_bebas').value||d.cerita_bebas||'').trim()
+  };
 
-  fetch(FORM_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body
-  }).finally(() => {
+  // Buat iframe tersembunyi buat nampung hasil submit (biar halaman gak ke-redirect)
+  let iframe = document.getElementById('hidden_iframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.name = 'hidden_iframe';
+    iframe.id = 'hidden_iframe';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+
+  // Buat form asli lalu submit ke iframe tersembunyi itu
+  const form = document.createElement('form');
+  form.action = FORM_URL;
+  form.method = 'POST';
+  form.target = 'hidden_iframe';
+
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+
+  // Tunggu bentar biar request sempat keluar, baru pindah ke success screen
+  setTimeout(() => {
     document.getElementById('page-2').classList.remove('active');
     document.getElementById('mainHeader').style.display = 'none';
     const nm = d.nama || document.getElementById('q_nama').value || '';
@@ -565,7 +589,7 @@ function submitForm() {
     setProgress(100);
     localStorage.removeItem(KEY);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  }, 800);
 }
 
 // ── Reset ──
